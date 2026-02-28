@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Ultimate AI Full Version</title>
+<style>
+body{
+margin:0;
+font-family:Arial;
+display:flex;
+height:100vh;
+background:#111;
+color:white;
+}
+
+.sidebar{
+width:220px;
+background:#1e1e1e;
+padding:20px;
+display:flex;
+flex-direction:column;
+}
+
+.sidebar h2{
+color:#42e695;
+}
+
+.sidebar button{
+margin:10px 0;
+padding:10px;
+border:none;
+border-radius:10px;
+cursor:pointer;
+}
+
+.main{
+flex:1;
+display:flex;
+flex-direction:column;
+}
+
+.header{
+background:#222;
+padding:15px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.chat-box{
+flex:1;
+padding:15px;
+overflow-y:auto;
+}
+
+.message{
+margin:10px 0;
+padding:10px 15px;
+border-radius:15px;
+max-width:70%;
+}
+
+.user{background:#42e695;color:black;margin-left:auto;}
+.bot{background:#333;}
+
+.input-area{
+display:flex;
+padding:10px;
+background:#222;
+}
+
+input{
+flex:1;
+padding:10px;
+border-radius:20px;
+border:none;
+}
+
+button.send{background:#7873f5;color:white;}
+button.mic{background:#42e695;color:black;}
+button.speak{background:#ff512f;color:white;}
+
+.theme-light{background:white;color:black;}
+.theme-light .sidebar{background:#eee;color:black;}
+.theme-light .main{background:#fff;color:black;}
+
+.theme-neon{background:black;color:#0ff;}
+.theme-neon .sidebar{background:#000;color:#0ff;}
+</style>
+</head>
+<body>
+
+<div class="sidebar">
+<h2>AI Pro</h2>
+<button onclick="changeTheme('dark')">Dark</button>
+<button onclick="changeTheme('light')">Light</button>
+<button onclick="changeTheme('neon')">Neon</button>
+<button onclick="clearChat()">Clear Chat</button>
+<button onclick="logout()">Logout</button>
+</div>
+
+<div class="main">
+<div class="header">
+<span>Welcome, <span id="userName"></span></span>
+<button onclick="toggleMusic()">Music</button>
+</div>
+
+<div class="chat-box" id="chatBox"></div>
+
+<div class="input-area">
+<input type="text" id="userInput" placeholder="Ask anything...">
+<button class="send" onclick="sendMessage()">Send</button>
+<button class="mic" onclick="startVoice()">🎤</button>
+<button class="speak" onclick="speakLast()">🔊</button>
+</div>
+</div>
+
+<audio id="bgMusic" loop>
+<source src="https://www.bensound.com/bensound-music/bensound-sunny.mp3">
+</audio>
+
+<script>
+const API_KEY="YOUR_OPENAI_API_KEY";
+let lastBotMessage="";
+
+document.getElementById("userName").innerText=localStorage.getItem("user");
+
+async function sendMessage(){
+let input=document.getElementById("userInput");
+let message=input.value.trim();
+if(!message)return;
+addMessage(message,"user");
+input.value="";
+
+try{
+let response=await fetch("https://api.openai.com/v1/chat/completions",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+API_KEY
+},
+body:JSON.stringify({
+model:"gpt-4o-mini",
+messages:[
+{role:"system",content:"Give long detailed story style answers."},
+{role:"user",content:message}
+]
+})
+});
+let data=await response.json();
+let reply=data.choices[0].message.content;
+addMessage(reply,"bot");
+lastBotMessage=reply;
+}catch{
+addMessage("AI connection error","bot");
+}
+}
+
+function addMessage(text,type){
+let chat=document.getElementById("chatBox");
+let msg=document.createElement("div");
+msg.classList.add("message",type);
+msg.innerText=text;
+chat.appendChild(msg);
+chat.scrollTop=chat.scrollHeight;
+}
+
+function speakLast(){
+if(!lastBotMessage)return;
+let speech=new SpeechSynthesisUtterance(lastBotMessage);
+window.speechSynthesis.speak(speech);
+}
+
+function startVoice(){
+let recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
+recognition.start();
+recognition.onresult=function(e){
+document.getElementById("userInput").value=e.results[0][0].transcript;
+};
+}
+
+function changeTheme(theme){
+document.body.className="";
+if(theme==="light")document.body.classList.add("theme-light");
+if(theme==="neon")document.body.classList.add("theme-neon");
+}
+
+function clearChat(){
+document.getElementById("chatBox").innerHTML="";
+}
+
+function logout(){
+localStorage.clear();
+window.location.href="index.html";
+}
+
+function toggleMusic(){
+let music=document.getElementById("bgMusic");
+if(music.paused){music.play();}
+else{music.pause();}
+}
+</script>
+
+</body>
+  </html>
