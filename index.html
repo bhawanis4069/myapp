@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Advanced AI Chat App</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+
+<style>
+body{
+margin:0;
+font-family:'Poppins',sans-serif;
+background:linear-gradient(-45deg,#ff6ec4,#7873f5,#42e695,#ff9a9e);
+background-size:400% 400%;
+animation:gradient 12s ease infinite;
+display:flex;
+justify-content:center;
+align-items:center;
+height:100vh;
+}
+
+@keyframes gradient{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+.container{
+width:400px;
+background:white;
+border-radius:20px;
+box-shadow:0 15px 40px rgba(0,0,0,0.3);
+overflow:hidden;
+display:flex;
+flex-direction:column;
+}
+
+.header{
+background:linear-gradient(90deg,#ff512f,#dd2476);
+color:white;
+padding:15px;
+text-align:center;
+font-weight:bold;
+font-size:20px;
+}
+
+.chat-box{
+flex:1;
+padding:15px;
+overflow-y:auto;
+display:flex;
+flex-direction:column;
+}
+
+.message{
+padding:10px 15px;
+border-radius:15px;
+margin:5px 0;
+max-width:80%;
+font-size:14px;
+animation:fadeIn .4s ease-in;
+}
+
+@keyframes fadeIn{
+from{opacity:0;transform:translateY(10px);}
+to{opacity:1;transform:translateY(0);}
+}
+
+.user{background:#42e695;align-self:flex-end;}
+.bot{background:#f1f1f1;align-self:flex-start;}
+
+.input-area{
+display:flex;
+padding:10px;
+background:#eee;
+}
+
+input{
+flex:1;
+padding:10px;
+border:none;
+border-radius:20px;
+outline:none;
+}
+
+button{
+margin-left:5px;
+padding:10px;
+border:none;
+border-radius:20px;
+cursor:pointer;
+font-size:14px;
+}
+
+.send{background:#7873f5;color:white;}
+.speak{background:#ff512f;color:white;}
+.mic{background:#42e695;color:black;}
+
+.login{
+position:absolute;
+background:white;
+padding:30px;
+border-radius:20px;
+box-shadow:0 15px 40px rgba(0,0,0,0.3);
+display:flex;
+flex-direction:column;
+width:300px;
+}
+
+.login input{
+margin:5px 0;
+padding:10px;
+}
+
+.login button{
+margin-top:10px;
+background:#7873f5;
+color:white;
+}
+</style>
+</head>
+<body>
+
+<div class="login" id="loginBox">
+<h2>Login / Signup</h2>
+<input type="text" id="username" placeholder="Username">
+<input type="password" id="password" placeholder="Password">
+<button onclick="login()">Enter</button>
+</div>
+
+<div class="container" id="chatApp" style="display:none;">
+<div class="header">🤖 Ultimate AI Chat</div>
+<div class="chat-box" id="chatBox"></div>
+
+<div class="input-area">
+<input type="text" id="userInput" placeholder="Ask anything...">
+<button class="send" onclick="sendMessage()">Send</button>
+<button class="mic" onclick="startVoice()">🎤</button>
+<button class="speak" onclick="speakLast()">🔊</button>
+</div>
+</div>
+
+<audio autoplay loop>
+<source src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" type="audio/mp3">
+</audio>
+
+<script>
+const API_KEY="YOUR_OPENAI_API_KEY";
+let lastBotMessage="";
+
+function login(){
+let u=document.getElementById("username").value;
+let p=document.getElementById("password").value;
+if(u&&p){
+localStorage.setItem("user",u);
+document.getElementById("loginBox").style.display="none";
+document.getElementById("chatApp").style.display="flex";
+}
+}
+
+async function sendMessage(){
+let input=document.getElementById("userInput");
+let message=input.value.trim();
+if(!message)return;
+addMessage(message,"user");
+input.value="";
+showTyping();
+
+try{
+let response=await fetch("https://api.openai.com/v1/chat/completions",{
+method:"POST",
+headers:{
+"Content-Type":"application/json",
+"Authorization":"Bearer "+API_KEY
+},
+body:JSON.stringify({
+model:"gpt-4o-mini",
+messages:[
+{role:"system",content:"Give long detailed story style answers in Hindi or English."},
+{role:"user",content:message}
+],
+temperature:0.8
+})
+});
+let data=await response.json();
+let reply=data.choices[0].message.content;
+removeTyping();
+addMessage(reply,"bot");
+lastBotMessage=reply;
+}catch(err){
+removeTyping();
+addMessage("Error connecting AI.","bot");
+}
+}
+
+function addMessage(text,type){
+let chat=document.getElementById("chatBox");
+let msg=document.createElement("div");
+msg.classList.add("message",type);
+msg.innerText=text;
+chat.appendChild(msg);
+chat.scrollTop=chat.scrollHeight;
+}
+
+function showTyping(){
+let chat=document.getElementById("chatBox");
+let typing=document.createElement("div");
+typing.classList.add("message","bot");
+typing.id="typing";
+typing.innerText="AI is typing...";
+chat.appendChild(typing);
+}
+
+function removeTyping(){
+let typing=document.getElementById("typing");
+if(typing)typing.remove();
+}
+
+function speakLast(){
+if(!lastBotMessage)return;
+let speech=new SpeechSynthesisUtterance(lastBotMessage);
+speech.lang="en-US";
+window.speechSynthesis.speak(speech);
+}
+
+function startVoice(){
+let recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)();
+recognition.lang="en-US";
+recognition.start();
+recognition.onresult=function(event){
+document.getElementById("userInput").value=event.results[0][0].transcript;
+};
+}
+</script>
+
+</body>
+  </html>
